@@ -1,12 +1,17 @@
 on: [push]
 
+permissions:
+  contents: write  # Grant write permissions for repository content
+
 jobs:
   hello_world_job:
     runs-on: ubuntu-latest
     name: OQuaRE-metrics-test
+
     steps:
       - uses: actions/checkout@v4
-      # Configuration
+      
+      # Set up Java and Python
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -15,7 +20,34 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip'
-      - name: Basic testing
-        uses: ./
-        with:
-          ontology-folders: ontologies ontologies/imports
+
+      # Debug input files
+      - name: Debug input files
+        run: |
+          echo "Listing ontologies folder:"
+          ls -R ontologies || echo "ontologies folder not found"
+          echo "Listing ontologies/imports folder:"
+          ls -R ontologies/imports || echo "ontologies/imports folder not found"
+
+      # Run the ontology processing step
+      - name: Run OQuaRE processing
+        run: |
+          mkdir -p OQuaRE && mkdir -p OQuaRE/results && mkdir -p OQuaRE/archives
+          mkdir -p OQuaRE/temp_results
+          ./scripts/process_ontology.sh ontologies/ ontologies/imports/
+          echo "Debugging OQuaRE temp_results folder:"
+          ls -R OQuaRE/temp_results || echo "No files in temp_results"
+
+      # Check for results and push output
+      - name: Handle results
+        run: |
+          if [ "$(ls -A ./OQuaRE/temp_results)" ]; then
+            mv -v OQuaRE/temp_results/* OQuaRE/results/
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git add OQuaRE/
+            git commit -m "Ontology metrics calculated - OQuaRE"
+            git push
+          else
+            echo "No results found in OQuaRE/temp_results"
+          fi
