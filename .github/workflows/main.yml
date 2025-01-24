@@ -1,7 +1,7 @@
 on: [push]
 
 permissions:
-  contents: write  # Grant write permissions for repository content
+  contents: write  # Grant write permissions for repository content, if needed.
 
 jobs:
   hello_world_job:
@@ -9,39 +9,44 @@ jobs:
     name: OQuaRE-metrics-test
 
     steps:
+      # Step 1: Check out the repository
       - uses: actions/checkout@v4
-      
-      # Set up Java and Python
+
+      # Step 2: Set up Java
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      # Step 3: Set up Python
       - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
           cache: 'pip'
 
-      # Debug input files
-      - name: Debug input files
+      # Step 4: Debugging - Check repository structure and verify inputs
+      - name: List repository structure
+        run: ls -R
+
+      - name: Debug ontologies folder
         run: |
           echo "Listing ontologies folder:"
-          ls -R ontologies || echo "ontologies folder not found"
+          ls ontologies || echo "ontologies folder not found"
           echo "Listing ontologies/imports folder:"
-          ls -R ontologies/imports || echo "ontologies/imports folder not found"
+          ls ontologies/imports || echo "ontologies/imports folder not found"
 
-      # Run the ontology processing step
-      - name: Run OQuaRE processing
+      # Step 5: Create necessary output directories
+      - name: Prepare output directories
         run: |
-          mkdir -p OQuaRE && mkdir -p OQuaRE/results && mkdir -p OQuaRE/archives
+          mkdir -p OQuaRE
+          mkdir -p OQuaRE/results
+          mkdir -p OQuaRE/archives
           mkdir -p OQuaRE/temp_results
-          ./scripts/process_ontology.sh ontologies/ ontologies/imports/
-          echo "Debugging OQuaRE temp_results folder:"
-          ls -R OQuaRE/temp_results || echo "No files in temp_results"
 
-      # Check for results and push output
+      # Step 6: Handle results (if any files are generated elsewhere)
       - name: Handle results
         run: |
-          if [ "$(ls -A ./OQuaRE/temp_results)" ]; then
+          if [ "$(ls -A ./OQuaRE/temp_results 2>/dev/null)" ]; then
             mv -v OQuaRE/temp_results/* OQuaRE/results/
             git config user.name github-actions
             git config user.email github-actions@github.com
@@ -50,4 +55,3 @@ jobs:
             git push
           else
             echo "No results found in OQuaRE/temp_results"
-          fi
