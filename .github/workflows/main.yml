@@ -22,7 +22,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-          cache: 'pip'
 
       # Step 4: Debugging - Check repository structure and verify inputs
       - name: List repository structure
